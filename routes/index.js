@@ -136,6 +136,17 @@ router.post('/books/:id/delete', asyncHandler(async(req, res) => {
   await book.destroy();
   res.redirect('/books');
 }))
+// Test edeceğimiz mantık fonksiyonu
+const validateLoan = (loanDuration, isBorrower, bookStatus) => {
+  if (!loanDuration || isNaN(loanDuration)) return "Loan duration must be a numeric value!";
+  const duration = parseInt(loanDuration);
+  if (duration < 1 || duration > 21) return "Loan duration must be between 1 and 21 days!";
+  if (isBorrower === false || isBorrower === "false") return "Hata: Ödünç alma yetkiniz yok!";
+  if (bookStatus === "Borrowed") return "Hata: Kitap şu an kütüphanede değil!";
+  return "Success";
+};
 
+// Fonksiyonu router nesnesine ekliyoruz ki test dosyası görebilsin
+router.validateLoan = validateLoan;
 module.exports = router;
 
