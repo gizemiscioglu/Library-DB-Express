@@ -138,11 +138,27 @@ router.post('/books/:id/delete', asyncHandler(async(req, res) => {
 }))
 // Test edeceğimiz mantık fonksiyonu
 const validateLoan = (loanDuration, isBorrower, bookStatus) => {
-  if (!loanDuration || isNaN(loanDuration)) return "Loan duration must be a numeric value!";
+  // Değişiklik: 0 değerini "yokluk" (false) saymaması için tip ve sayı kontrolü yapıyoruz
+  if (typeof loanDuration !== 'number' || isNaN(loanDuration)) {
+    return "Loan duration must be a numeric value!";
+  }
+
   const duration = parseInt(loanDuration);
-  if (duration < 1 || duration > 21) return "Loan duration must be between 1 and 21 days!";
-  if (isBorrower === false || isBorrower === "false") return "Hata: Ödünç alma yetkiniz yok!";
-  if (bookStatus === "Borrowed") return "Hata: Kitap şu an kütüphanede değil!";
+
+  // Sınır Değer Analizi (BVA) kontrolleri
+  if (duration < 1 || duration > 21) {
+    return "Loan duration must be between 1 and 21 days!";
+  }
+
+  // Yetki ve Durum kontrolleri
+  if (isBorrower === false || isBorrower === "false") {
+    return "Hata: Ödünç alma yetkiniz yok!";
+  }
+
+  if (bookStatus === "Borrowed") {
+    return "Hata: Kitap şu an kütüphanede değil!";
+  }
+
   return "Success";
 };
 
