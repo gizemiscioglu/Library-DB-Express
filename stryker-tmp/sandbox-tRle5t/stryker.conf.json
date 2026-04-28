@@ -1,9 +1,0 @@
-{
-  "packageManager": "npm",
-  "reporters": ["html", "clear-text", "progress"],
-  "testRunner": "jest",
-  "coverageAnalysis": "perTest",
-  "mutate": ["test/book.test.js"],
-  "concurrency": 1,
-  "tempDirName": "stryker-tmp"
-}

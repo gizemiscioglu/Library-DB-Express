@@ -1,3 +1,4 @@
+// @ts-nocheck
 // 1. Fonksiyonu index.js içinden çağırıyoruz (Kopya değil, gerçeği!)
 const { validateLoan } = require('../routes/index'); 
 
