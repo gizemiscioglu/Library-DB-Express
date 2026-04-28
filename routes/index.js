@@ -136,7 +136,6 @@ router.post('/books/:id/delete', asyncHandler(async(req, res) => {
   await book.destroy();
   res.redirect('/books');
 }))
-
 // Test edeceğimiz mantık fonksiyonu
 const validateLoan = (loanDuration, isBorrower, bookStatus) => {
   if (!loanDuration || isNaN(loanDuration)) return "Loan duration must be a numeric value!";
