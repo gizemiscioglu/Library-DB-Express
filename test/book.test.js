@@ -1,75 +1,84 @@
-// 1. ADIM: HER ŞEYDEN ÖNCE MOCKLAMA (En tepede olmalı!)
+// 1. ADIM: MODELLERİ EN TEPEDE MOCKLA (Router'dan önce!)
 jest.mock('../models', () => ({
   Book: {
     findAndCountAll: jest.fn(),
     create: jest.fn(),
     findByPk: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
   },
 }));
 
-// 2. ADIM: ŞİMDİ DİĞERLERİNİ ÇAĞIRALIM
-const { validateLoan } = require('../routes/index');
 const request = require('supertest');
 const express = require('express');
+const { validateLoan } = require('../routes/index');
 const router = require('../routes/index');
 const { Book } = require('../models');
 
-// 3. ADIM: SANAL EXPRESS KURULUMU
+// 2. ADIM: TEST İÇİN EXPRESS KURULUMU
 const app = express();
+app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// 4. ADIM: RENDER MOTORUNU DEVRE DIŞI BIRAKALIM
-// res.render komutu gelince hata vermemesi için sahte bir fonksiyonla değiştiriyoruz
+// RENDER MOTORUNU DEVRE DIŞI BIRAK (500 Hatasını Önler)
 app.use((req, res, next) => {
   res.render = (view, locals) => {
-    res.status(200).send(`Rendered View: ${view}`);
+    res.status(200).send(`Mock Render: ${view}`);
   };
   next();
 });
 
 app.use('/', router);
 
-// --- TEST BAŞLIYOR ---
+// --- TESTLER ---
 
-describe('Library System - Final Comprehensive Suite', () => {
+describe('Library System - Final Comprehensive Test Suite', () => {
 
-    // --- BÖLÜM 1: validateLoan (BVA, ECP, DT) ---
-    // (Daha önce geçen 16 testin buradaki mantıkla aynen devam eder)
-    test('validateLoan Logic: 1 day should be Success', () => {
-        expect(validateLoan(1, true, "Available")).toBe("Success");
+  // validateLoan Testleri (BVA, ECP, DT)
+  describe('validateLoan Logic', () => {
+    test('BVA: 1 day should be Success', () => {
+      expect(validateLoan(1, true, "Available")).toBe("Success");
+    });
+    // ... diğer validateLoan testlerini buraya ekleyebilirsin
+  });
+
+  describe('Express Route Logic', () => {
+
+    // PAGINATION TESTİ (BVA)
+    test('Pagination: Page 2 offset calculation', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
+      await request(app).get('/books?page=2');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: 5 })
+      );
     });
 
-    // --- BÖLÜM 2: Express Rota Mantığı ---
-    describe('Express Route Logic', () => {
-
-        test('Pagination: Page 2 offset should be 5', async () => {
-            Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
-            await request(app).get('/books?page=2');
-            expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 5 }));
-        });
-
-        test('Search: Should use Op.like filter', async () => {
-            Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [] });
-            await request(app).get('/books?search=Hamlet');
-            expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ where: expect.any(Object) }));
-        });
-
-        test('Error Handling: Should catch validation error and return 200', async () => {
-            // Sequelize hata objesini taklit ediyoruz
-            const mockError = new Error();
-            mockError.name = 'SequelizeValidationError';
-            mockError.errors = [{ message: 'Title is required' }];
-            
-            // Veritabanı ekleme işlemi hata verirse...
-            Book.create.mockRejectedValue(mockError);
-
-            const res = await request(app)
-                .post('/books/new')
-                .send({ title: '' });
-
-            // ARTIK 500 VEREMEZ! Çünkü res.render'ı yukarıda susturduk.
-            expect(res.status).toBe(200);
-            expect(res.text).toContain('Rendered View: new-book');
-        });
+    // SEARCH TESTİ (ECP)
+    test('Search: Filtering check', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [] });
+      await request(app).get('/books?search=test');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.any(Object) })
+      );
     });
+
+    // ERROR HANDLING TESTİ (Decision Table / Decision Coverage)
+    test('Error Handling: Catching SequelizeValidationError', async () => {
+      // DİKKAT: Hata objesi tam olarak index.js'nin beklediği yapıda olmalı!
+      const mockSequelizeError = {
+        name: 'SequelizeValidationError',
+        errors: [{ message: 'Title is required' }] // .map() için bu yapı şart!
+      };
+      
+      Book.create.mockRejectedValue(mockSequelizeError);
+
+      const res = await request(app)
+        .post('/books/new')
+        .send({ title: '' });
+
+      // Sonuç 200 olmalı çünkü catch bloğu hatayı yakalayıp sayfayı render etmeli
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Mock Render: new-book');
+    });
+  });
 });
