@@ -1,3 +1,4 @@
+console.log("DİKKAT: Şu an en güncel test dosyası çalışıyor!");
 // 1. MOCKLAMA - En tepede olmalı
 jest.mock('../models', () => ({
   Book: {
