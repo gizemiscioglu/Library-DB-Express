@@ -136,25 +136,25 @@ router.post('/books/:id/delete', asyncHandler(async(req, res) => {
   await book.destroy();
   res.redirect('/books');
 }))
-// Test edeceğimiz mantık fonksiyonu
+// The logic function we will test
 const validateLoan = (loanDuration, isBorrower, bookStatus) => {
   
-  // 1. Tip ve Sayı Kontrolü (Boşluk, metin veya NaN durumlarını yakalar)
+  //1. Type and Number Check (Detects spaces, text, or NaN cases)
   if (loanDuration === "" || loanDuration === null || isNaN(loanDuration)) {
     return "Loan duration must be a numeric value!";
   }
 
-  // 2. Yetki Kontrolü
+  // 2. Authorization check 
   if (isBorrower === false || isBorrower === "false") {
     return "Hata: Ödünç alma yetkiniz yok!";
   }
 
-  // 3. Kitap Durumu Kontrolü (DT-R4 için önceliği buraya aldık)
+  //3. Book Status Check (We've prioritized DT-R4 here)
   if (bookStatus === "Borrowed") {
     return "Hata: Kitap şu an kütüphanede değil!";
   }
 
-  // 4. Gün Sınırı Kontrolü (1-21 arası)
+  // 4. Day Limit Control (between 1-21)
   const duration = parseInt(loanDuration);
   if (duration < 1 || duration > 21) {
     return "Loan duration must be between 1 and 21 days!";
@@ -163,7 +163,7 @@ const validateLoan = (loanDuration, isBorrower, bookStatus) => {
   return "Success";
 };
 
-// Fonksiyonu router nesnesine ekliyoruz (Testin görmesi için ŞART)
+//We add the function to the router object (IT is ESSENTIAL for the test to see it).
 router.validateLoan = validateLoan;
 module.exports = router;
 
