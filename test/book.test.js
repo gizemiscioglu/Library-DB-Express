@@ -76,3 +76,82 @@ describe('Library Management System - Final Test Suite (Based on Project Tables)
         expect(validateLoan(10, false, "Available")).toBe("Hata: Ödünç alma yetkiniz yok!");
     });
 });
+const request = require('supertest');
+const express = require('express');
+const router = require('../routes/index'); // Router'ın olduğu yol
+
+const app = express();
+app.use(express.urlencoded({ extended: false }));
+app.use('/', router);
+
+// Book modelini mock'lamamız (sahtesini yapmamız) gerekiyor 
+// çünkü test sırasında gerçek DB'yi kirletmek istemeyiz.
+jest.mock('../models', () => ({
+  Book: {
+    findAndCountAll: jest.fn(),
+    create: jest.fn(),
+    findByPk: jest.fn(),
+  },
+}));
+
+const { Book } = require('../models');
+
+describe('Express Route Tests (Pagination & Search)', () => {
+
+  // --- PAGINATION TESTLERİ (ECP & BVA) ---
+  describe('GET /books Pagination Logic', () => {
+    
+    test('ECP-Valid: Page 1 should have offset 0', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
+      
+      await request(app).get('/books?page=1');
+      
+      // Kodundaki: offset: page * 5 - 5 => 1 * 5 - 5 = 0
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
+        offset: 0,
+        limit: 5
+      }));
+    });
+
+    test('ECP-Valid: Page 2 should have offset 5', async () => {
+       await request(app).get('/books?page=2');
+       // 2 * 5 - 5 = 5
+       expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
+         offset: 5
+       }));
+    });
+  });
+
+  // --- SEARCH TESTLERİ (ECP) ---
+  describe('GET /books Search Logic', () => {
+    
+    test('ECP-Search: When search query is present, it should use Op.like', async () => {
+      await request(app).get('/books?search=JavaScript');
+      
+      // Sequelize'ın where bloğu ile çağrılıp çağrılmadığını kontrol ediyoruz
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.any(Object)
+      }));
+    });
+  });
+
+  // --- ERROR HANDLING TESTLERİ ---
+  describe('POST /books/new Validation', () => {
+    
+    test('Should render new-book with errors when validation fails', async () => {
+      // Sequelize hata simülasyonu
+      const validationError = new Error();
+      validationError.name = 'SequelizeValidationError';
+      validationError.errors = [{ message: 'Title is required' }];
+      
+      Book.create.mockRejectedValue(validationError);
+
+      const res = await request(app)
+        .post('/books/new')
+        .send({ title: '' }); // Boş veri gönderiyoruz
+
+      expect(res.status).toBe(200); // Hata sayfası render edildiği için 200 döner
+      expect(res.text).toContain('Title is required');
+    });
+  });
+});
