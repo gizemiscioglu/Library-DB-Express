@@ -136,34 +136,6 @@ router.post('/books/:id/delete', asyncHandler(async(req, res) => {
   await book.destroy();
   res.redirect('/books');
 }))
-// The logic function we will test
-const validateLoan = (loanDuration, isBorrower, bookStatus) => {
-  
-  //1. Type and Number Check (Detects spaces, text, or NaN cases)
-  if (loanDuration === "" || loanDuration === null || isNaN(loanDuration)) {
-    return "Loan duration must be a numeric value!";
-  }
 
-  // 2. Authorization check 
-  if (isBorrower === false || isBorrower === "false") {
-    return "Hata: Ödünç alma yetkiniz yok!";
-  }
-
-  //3. Book Status Check (We've prioritized DT-R4 here)
-  if (bookStatus === "Borrowed") {
-    return "Hata: Kitap şu an kütüphanede değil!";
-  }
-
-  // 4. Day Limit Control (between 1-21)
-  const duration = parseInt(loanDuration);
-  if (duration < 1 || duration > 21) {
-    return "Loan duration must be between 1 and 21 days!";
-  }
-
-  return "Success";
-};
-
-//We add the function to the router object (IT is ESSENTIAL for the test to see it).
-router.validateLoan = validateLoan;
 module.exports = router;
 
