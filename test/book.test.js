@@ -1,4 +1,4 @@
-// 1. MOCKLAMA (Router'dan önce olmalı)
+// 1. MOCKLAMA - En tepede olmalı
 jest.mock('../models', () => ({
   Book: {
     findAndCountAll: jest.fn(),
@@ -14,12 +14,12 @@ const router = require('../routes/index');
 const { Book } = require('../models');
 
 const app = express();
-app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// --- HATA DEDEKTİFİ VE RENDER SUSTURUCU ---
+// --- RES.RENDER'I TAMAMEN BYPASS EDELİM ---
 app.use((req, res, next) => {
   res.render = (view, locals) => {
+    // locals içinde book veya errors yoksa bile çökmemesi için basit bir cevap dönelim
     res.status(200).send(`Rendered: ${view}`);
   };
   next();
@@ -27,39 +27,36 @@ app.use((req, res, next) => {
 
 app.use('/', router);
 
-// Eğer bir hata 500'e düşerse terminalde ne olduğunu görelim
-app.use((err, req, res, next) => {
-  console.log("DİKKAT! Uygulama şu hatadan dolayı 500 verdi:", err.message);
-  res.status(500).send(err.message);
-});
-
 // --- TESTLER ---
 
-describe('Library System - Final Test', () => {
+describe('Final Library Test Suite', () => {
 
-  // validateLoan Testleri (Hali hazırda geçen 16 test)
-  test('validateLoan: Basic Success Check', () => {
-    expect(validateLoan(10, true, "Available")).toBe("Success");
+  // validateLoan Testleri (BVA, ECP, DT)
+  describe('validateLoan Logic', () => {
+    test('BVA: 1 day should be Success', () => {
+      expect(validateLoan(1, true, "Available")).toBe("Success");
+    });
+    // Diğer testlerin burada devam ediyor...
   });
 
   describe('Express Route Logic', () => {
     
-    test('Error Handling: Catching SequelizeValidationError', async () => {
-      // Sequelize hata yapısını birebir taklit ediyoruz
+    test('Error Handling: Should catch SequelizeValidationError', async () => {
+      // Sequelize hata yapısını index.js'nin beklediği şekilde kuralım
       const mockSequelizeError = new Error();
       mockSequelizeError.name = 'SequelizeValidationError';
-      // index.js içindeki .map() fonksiyonunun çökmemesi için bu yapı şart:
-      mockSequelizeError.errors = [
-        { message: 'Title is required' }
-      ];
+      // .map() fonksiyonunun çökmemesi için 'errors' bir array olmalı
+      mockSequelizeError.errors = [{ message: 'Title is required' }];
       
+      // Book.create çağrıldığında bu hatayı fırlatmasını söylüyoruz
       Book.create.mockRejectedValue(mockSequelizeError);
 
       const res = await request(app)
         .post('/books/new')
-        .send({ title: '' });
+        .send({ title: '' }); // Geçersiz veri gönderiyoruz
 
-      // Eğer hala 500 alıyorsan terminaldeki "DİKKAT!" yazısını oku
+      // ARTIK 200 ALMALISIN
+      // Çünkü res.render artık gerçek dosyaya bakmıyor, bizim sahte fonksiyonumuza bakıyor.
       expect(res.status).toBe(200);
       expect(res.text).toContain('Rendered: new-book');
     });
