@@ -50,7 +50,7 @@ describe('Library Management System - Final Test Suite (Based on Project Tables)
         expect(validateLoan("12%", true, "Available")).toBe("Loan duration must be a numeric value!");
     });
 
-    // --- DECISION TABLE (Karar Tablosu) 
+    // --- DECISION TABLE 
     // R1: T, T, T -> Success
     test('DT-R1: Valid User, Available Book, Valid Days - Success', () => {
         expect(validateLoan(10, true, "Available")).toBe("Success");
