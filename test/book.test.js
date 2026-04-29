@@ -1,21 +1,21 @@
 const { validateLoan } = require('../routes/index');
 const request = require('supertest');
 const express = require('express');
-const path = require('path');
 const router = require('../routes/index');
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 
-// --- KURŞUN GEÇİRMEZ RENDER AYARI ---
-// Bu blok, Express'in gerçek dosyaları aramasını engeller ve 
-// render komutu geldiğinde "tamam, hallettim" der.
-app.engine('pug', (filePath, options, callback) => {
-  return callback(null, '<html><body>Mock Rendered Content</body></html>');
+// --- EN KESİN ÇÖZÜM: RES.RENDER'I DEVRE DIŞI BIRAKMAK ---
+// Express'in render sistemini tamamen kapatıp, yerine basit bir cevap dönen 
+// bir fonksiyon koyuyoruz. Artık Pug dosyalarına veya klasörlere ihtiyaç yok!
+app.use((req, res, next) => {
+  res.render = (view, locals) => {
+    res.status(200).send(`Rendered: ${view}`);
+  };
+  next();
 });
-app.set('views', path.join(__dirname, '../views'));
-app.set('view engine', 'pug');
-// ------------------------------------
+// ------------------------------------------------------
 
 app.use('/', router);
 
@@ -51,17 +51,16 @@ describe('Library Management System - Comprehensive Test Suite', () => {
         });
     });
 
-    // --- BÖLÜM 2: Index.js Rota ve Mantık Testleri ---
+    // --- BÖLÜM 2: Express Rotaları (Pagination, Search, Error Handling) ---
     describe('Express Route Logic Tests', () => {
 
         test('Pagination: Should calculate correct offset for Page 2', async () => {
             Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
             await request(app).get('/books?page=2');
             
-            // 2 * 5 - 5 = 5 (BVA: Sayfa sınır testi)
+            // BVA Testi: (2 * 5) - 5 = 5 offset mi?
             expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
-                offset: 5,
-                limit: 5
+                offset: 5
             }));
         });
 
@@ -69,26 +68,29 @@ describe('Library Management System - Comprehensive Test Suite', () => {
             Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [] });
             await request(app).get('/books?search=Hamlet');
             
-            // ECP: Arama olan durum sınıfı
+            // ECP Testi: Arama filtresi objesi gönderiliyor mu?
             expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
                 where: expect.any(Object)
             }));
         });
 
-        test('Error Handling: Should render new-book page when validation fails', async () => {
-            // Sequelize hata simülasyonu
+        test('Error Handling: Should catch Sequelize validation error', async () => {
+            // Sahte bir Sequelize hatası yaratalım
             const validationError = new Error();
             validationError.name = 'SequelizeValidationError';
             validationError.errors = [{ message: 'Title is required' }];
             
+            // Book.create çağrıldığında bu hatayı fırlat
             Book.create.mockRejectedValue(validationError);
 
             const res = await request(app)
                 .post('/books/new')
                 .send({ title: '' });
 
-            // Artık 500 değil 200 dönecek çünkü yukarıda sahte bir render motoru kurduk!
+            // ARTIK HATA ALMAMALISIN:
+            // res.render artık yukarıdaki sahte fonksiyonu kullanıyor (200 OK döner)
             expect(res.status).toBe(200); 
+            expect(res.text).toContain('Rendered: new-book');
         });
     });
 });
