@@ -2,8 +2,8 @@ const { validateLoan } = require('../routes/index');
 
 describe('Library Management System - Final Test Suite (Based on Project Tables)', () => {
 
-    // --- BVA (Boundary Value Analysis) - Image 325079 ---
-    // Sınır Değer Analizi: 1, 2, 20, 21 (Geçerli); 0, 22 (Geçersiz)
+    // --- BVA (Boundary Value Analysis) 
+    // Boundary Value Analysis: 1, 2, 20, 21 (Valid); 0, 22 (Invalid)
     test('BVA-E1: 1 day (Min Boundary) - Valid', () => {
         expect(validateLoan(1, true, "Available")).toBe("Success");
     });
@@ -28,8 +28,8 @@ describe('Library Management System - Final Test Suite (Based on Project Tables)
         expect(validateLoan(22, true, "Available")).toBe("Loan duration must be between 1 and 21 days!");
     });
 
-    // --- ECP (Equivalence Class Partitioning) - Image 3250b8 ---
-    // Eşdeğer Paylara Bölme: 15, -3, "", "Ten", "12%"
+    // --- ECP (Equivalence Class Partitioning) 
+    // Equivalence Class Partitioning: 15, -3, "", "Ten", "12%"
     test('ECP-E1: 15 days (Valid Loan Duration) - Success', () => {
         expect(validateLoan(15, true, "Available")).toBe("Success");
     });
@@ -50,7 +50,7 @@ describe('Library Management System - Final Test Suite (Based on Project Tables)
         expect(validateLoan("12%", true, "Available")).toBe("Loan duration must be a numeric value!");
     });
 
-    // --- DECISION TABLE (Karar Tablosu) - Image 325053 ---
+    // --- DECISION TABLE (Karar Tablosu) 
     // R1: T, T, T -> Success
     test('DT-R1: Valid User, Available Book, Valid Days - Success', () => {
         expect(validateLoan(10, true, "Available")).toBe("Success");
