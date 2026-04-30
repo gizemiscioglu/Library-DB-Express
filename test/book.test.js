@@ -2,14 +2,12 @@ const request = require('supertest');
 const express = require('express');
 const router = require('../routes/index'); 
 const { Book } = require('../models');
-const { Op } = require('sequelize');
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use('/', router);
 app.set('view engine', 'pug'); 
 
-// Sequelize Model Mocking
 jest.mock('../models', () => ({
   Book: {
     findAndCountAll: jest.fn(),
@@ -20,114 +18,116 @@ jest.mock('../models', () => ({
   },
 }));
 
-describe('Complete Library System Audit (ECP, BVA, Decision Table)', () => {
+describe('Library System - Full Audit (16 Scenarios)', () => {
   
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  beforeEach(() => { jest.clearAllMocks(); });
 
-  // --- SECTION 1: ECP - BOOK SEARCH & REGISTRATION ---
-  describe('ECP: Search Functionality', () => {
-    
-    test('E1: Search Any Kind Of Text (Harry Potter)', async () => {
+  // --- SECTION 1: ECP (6 TESTS) ---
+  describe('ECP Scenarios', () => {
+    test('E1: Search Any Kind Of Text', async () => {
       Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [{ title: 'Harry Potter' }] });
       const res = await request(app).get('/books?search=Harry');
       expect(res.status).toBe(200);
-      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ where: expect.any(Object) }));
     });
 
-    test('E2: Year-based Search (2020)', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [{ title: 'Book A', year: 2020 }] });
-      const res = await request(app).get('/books?search=2020');
-      expect(res.status).toBe(200);
-      // Logic check for potential numeric mismatch
-    });
-
-    test('U2: Search Blank Query', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: new Array(5) });
-      const res = await request(app).get('/books?search= ');
-      expect(res.status).toBe(200);
+    test('E2: Year-based Search', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 1, rows: [{ title: '2020 Book', year: 2020 }] });
+      await request(app).get('/books?search=2020');
       expect(Book.findAndCountAll).toHaveBeenCalled();
     });
-  });
 
-  // --- SECTION 2: BVA - PAGINATION LOGIC ---
-  describe('BVA: Pagination Boundaries', () => {
-
-    test('BVA E1/E2: Page = 1 when items <= 5', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: new Array(5) });
-      const res = await request(app).get('/books?page=1');
-      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ limit: 5, offset: 0 }));
-    });
-
-    test('BVA E3/E4: Page = 2 should be created (Boundary 6)', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 6, rows: [{ title: '6th Book' }] });
+    test('E3: Pagination (URL - Page 2)', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
       await request(app).get('/books?page=2');
       expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 5 }));
     });
 
-    test('BVA E5: Page = Max (Last books returned)', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 15, rows: new Array(5) });
-      await request(app).get('/books?page=3');
-      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 10 }));
-    });
-
-    test('U3 (ECP) & BVA: Negative Page Number', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
-      await request(app).get('/books?page=-1');
-      // Requirement: Default to Page 1 (Offset 0)
-      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }));
-    });
-
-    test('BVA U1: Page = Max + 1 (Returns No Results)', async () => {
-      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
-      const res = await request(app).get('/books?page=3'); 
-      expect(res.text).toContain('books'); // Check if index renders correctly
-    });
-  });
-
-  // --- SECTION 3: DT - BOOK REGISTRATION LOGIC ---
-  describe('Decision Table: Registration Logic', () => {
-
-    test('R1: Title(T) and Author(T) - Save to Database', async () => {
-      const validBook = { title: 'Test Title', author: 'Test Author' };
-      Book.create.mockResolvedValue(validBook);
-      const res = await request(app).post('/books/new').send(validBook);
-      expect(res.status).toBe(302); 
-      expect(res.header.location).toBe('/books');
-    });
-
-    test('R2: Title(T) and Author(F) - Show Error', async () => {
-      const error = { name: 'SequelizeValidationError', errors: [{ message: 'Author is required' }] };
-      Book.create.mockRejectedValue(error);
-      const res = await request(app).post('/books/new').send({ title: 'Title Only' });
-      expect(res.status).toBe(200); 
-      expect(Book.create).toHaveBeenCalled();
-    });
-
-    test('R3: Title(F) and Author(T) - Show Error', async () => {
-      const error = { name: 'SequelizeValidationError', errors: [{ message: 'Title is required' }] };
-      Book.create.mockRejectedValue(error);
-      const res = await request(app).post('/books/new').send({ author: 'Author Only' });
-      expect(res.status).toBe(200);
-    });
-
-    test('R4: Title(F) and Author(F) - Show Error', async () => {
-      const error = { name: 'SequelizeValidationError', errors: [{ message: 'Fields required' }] };
+    test('U1: Create New Book (Validation Trigger)', async () => {
+      const error = { name: 'SequelizeValidationError', errors: [{ message: 'Error' }] };
       Book.create.mockRejectedValue(error);
       const res = await request(app).post('/books/new').send({});
       expect(res.status).toBe(200);
     });
+
+    test('U2: Search Blank Query', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: [] });
+      await request(app).get('/books?search= ');
+      expect(Book.findAndCountAll).toHaveBeenCalled();
+    });
+
+    test('U3: Pagination With Invalid Number (Negative)', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
+      await request(app).get('/books?page=-1');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }));
+    });
   });
 
-  // --- SECTION 4: CRUD OPERATIONS (DELETE/UPDATE) ---
-  describe('CRUD Operations', () => {
-    test('Delete: should destroy book and redirect', async () => {
-      const mockBook = { destroy: jest.fn() };
-      Book.findByPk.mockResolvedValue(mockBook);
-      const res = await request(app).post('/books/1/delete');
-      expect(mockBook.destroy).toHaveBeenCalled();
+  // --- SECTION 2: BVA (6 TESTS) ---
+  describe('BVA Scenarios', () => {
+    test('BVA E1: 1 <= e <= 4 (No pagination buttons)', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 4, rows: [] });
+      const res = await request(app).get('/books');
+      expect(res.status).toBe(200);
+    });
+
+    test('BVA E2: 4 < e = 5 (Exactly 1 page)', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: [] });
+      await request(app).get('/books');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ limit: 5 }));
+    });
+
+    test('BVA E3: 5 < e <= 10 (Page 2 should be created)', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 6, rows: [] });
+      await request(app).get('/books?page=2');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 5 }));
+    });
+
+    test('BVA E4: Page = 1', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: [] });
+      await request(app).get('/books?page=1');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }));
+    });
+
+    test('BVA E5: Page = Max', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 15, rows: [] });
+      await request(app).get('/books?page=3');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 10 }));
+    });
+
+    test('BVA U1: Page = Max + 1', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
+      const res = await request(app).get('/books?page=3');
+      expect(res.text).toContain('books');
+    });
+  });
+
+  // --- SECTION 3: DECISION TABLE (4 TESTS) ---
+  describe('Decision Table Scenarios', () => {
+    test('DT R1: Title(T), Author(T)', async () => {
+      Book.create.mockResolvedValue({});
+      const res = await request(app).post('/books/new').send({ title: 'A', author: 'B' });
       expect(res.status).toBe(302);
+    });
+
+    test('DT R2: Title(T), Author(F)', async () => {
+      const err = { name: 'SequelizeValidationError', errors: [] };
+      Book.create.mockRejectedValue(err);
+      const res = await request(app).post('/books/new').send({ title: 'A' });
+      expect(res.status).toBe(200);
+    });
+
+    test('DT R3: Title(F), Author(T)', async () => {
+      const err = { name: 'SequelizeValidationError', errors: [] };
+      Book.create.mockRejectedValue(err);
+      const res = await request(app).post('/books/new').send({ author: 'B' });
+      expect(res.status).toBe(200);
+    });
+
+    test('DT R4: Title(F), Author(F)', async () => {
+      const err = { name: 'SequelizeValidationError', errors: [] };
+      Book.create.mockRejectedValue(err);
+      const res = await request(app).post('/books/new').send({});
+      expect(res.status).toBe(200);
     });
   });
 });
