@@ -1,6 +1,6 @@
 {
   "packageManager": "npm",
-  "reporters": ["clear-text", "progress"],
+  "reporters": ["html", "clear-text", "progress"],
   "testRunner": "jest",
   "mutate": ["routes/index.js"],
   "coverageAnalysis": "off",
