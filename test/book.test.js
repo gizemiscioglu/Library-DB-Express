@@ -31,7 +31,7 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(200);
     });
 
-    test.skip('E2: FAIL - Year Search (Type Mismatch)', async () => {
+    test('E2: FAIL - Year Search (Type Mismatch)', async () => {
       Book.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
       const res = await request(app).get('/books?search=2020');
       expect(res.text).toContain('Harry Potter'); 
@@ -55,7 +55,7 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(302);
     });
 
-    test.skip('U1: FAIL - Invalid ID Detail (Crash)', async () => {
+    test('U1: FAIL - Invalid ID Detail (Crash)', async () => {
       Book.findByPk.mockResolvedValue(null);
       const res = await request(app).get('/books/9999');
       expect(res.status).not.toBe(500); 
@@ -66,7 +66,7 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(Book.findAndCountAll).toHaveBeenCalled();
     });
 
-    test.skip('U3: FAIL - Negative Page', async () => {
+    test('U3: FAIL - Negative Page', async () => {
       Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
       await request(app).get('/books?page=-1');
       expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }));
@@ -79,7 +79,7 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(200);
     });
 
-    test.skip('U5: FAIL - Delete Non-existent ID', async () => {
+    test('U5: FAIL - Delete Non-existent ID', async () => {
       Book.findByPk.mockResolvedValue(null);
       const res = await request(app).post('/books/9999/delete');
       expect(res.status).not.toBe(500);
