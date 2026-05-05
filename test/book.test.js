@@ -31,7 +31,6 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(200);
     });
 
-    // SKIP EDİLDİ - Type Mismatch Hatası
     test.skip('E2: FAIL - Year Search (Type Mismatch)', async () => {
       Book.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
       const res = await request(app).get('/books?search=2020');
@@ -56,7 +55,6 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(302);
     });
 
-    // SKIP EDİLDİ - Sunucu 500 Hatası Veriyor (Crash)
     test.skip('U1: FAIL - Invalid ID Detail (Crash)', async () => {
       Book.findByPk.mockResolvedValue(null);
       const res = await request(app).get('/books/9999');
@@ -68,7 +66,6 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(Book.findAndCountAll).toHaveBeenCalled();
     });
 
-    // SKIP EDİLDİ - Eksi sayfa değerinde offset hatası (-10)
     test.skip('U3: FAIL - Negative Page', async () => {
       Book.findAndCountAll.mockResolvedValue({ count: 10, rows: [] });
       await request(app).get('/books?page=-1');
@@ -82,7 +79,6 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(res.status).toBe(200);
     });
 
-    // SKIP EDİLDİ - Olmayan ID silinirken sunucu 500 hatası veriyor
     test.skip('U5: FAIL - Delete Non-existent ID', async () => {
       Book.findByPk.mockResolvedValue(null);
       const res = await request(app).post('/books/9999/delete');
@@ -108,4 +104,43 @@ describe('SE 2226 - Full Project Audit (20 Tests Total)', () => {
       expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 5 }));
     });
     test('BVA E4: Page 1', async () => {
-      Book.findAndCountAll
+      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: [] });
+      await request(app).get('/books?page=1');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }));
+    });
+    test('BVA E5: Last Page', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 15, rows: [] });
+      await request(app).get('/books?page=3');
+      expect(Book.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ offset: 10 }));
+    });
+    test('BVA U1: Page 999', async () => {
+      Book.findAndCountAll.mockResolvedValue({ count: 5, rows: [] });
+      const res = await request(app).get('/books?page=999');
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // --- BÖLÜM 3: DECISION TABLE (4 TEST) ---
+  describe('DT: Form Validation', () => {
+    test('DT R1: T/T', async () => {
+      Book.create.mockResolvedValue({});
+      const res = await request(app).post('/books/new').send({ title: 'A', author: 'B' });
+      expect(res.status).toBe(302);
+    });
+    test('DT R2: T/F', async () => {
+      Book.create.mockRejectedValue({ name: 'SequelizeValidationError', errors: [] });
+      const res = await request(app).post('/books/new').send({ title: 'A' });
+      expect(res.status).toBe(200);
+    });
+    test('DT R3: F/T', async () => {
+      Book.create.mockRejectedValue({ name: 'SequelizeValidationError', errors: [] });
+      const res = await request(app).post('/books/new').send({ author: 'B' });
+      expect(res.status).toBe(200);
+    });
+    test('DT R4: F/F', async () => {
+      Book.create.mockRejectedValue({ name: 'SequelizeValidationError', errors: [] });
+      const res = await request(app).post('/books/new').send({});
+      expect(res.status).toBe(200);
+    });
+  });
+});
